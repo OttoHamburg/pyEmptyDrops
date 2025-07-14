@@ -1,13 +1,13 @@
 import scanpy as sc
 import numpy as np
-from fontTools.subset.svg import update_glyph_href_links
-from numba import typeof
+import pandas as pd
 from scipy.sparse import csr_matrix
-from scipy.optimize import minimize, minimize_scalar
-from scipy.special import gamma, gammaln, factorial  # gamma function and Log of the gamma function
-import scipy.stats as ss
+from scipy.stats import multinomial
 from collections import Counter
-from tqdm import tqdm
+from statsmodels.stats.multitest import multipletests
+from scipy.special import gammaln
+from scipy.optimize import minimize_scalar
+
 
 
 """
@@ -15,21 +15,20 @@ Functionality:  Checks a CSR matrix for float values.
                 Prompts the user to continue or exit if floats are found.
 Returns:        True/False.
 """
-def check_matrix_contain_floats(matrix):
+def check_matrix_contain_floats(m):
     try:
-        check_values(matrix)
+        check_values(m)
     except ValueError as e:
         # Catch the specific ValueError raised
         print(e)
-        #response = input("Do you want to continue processing? (yes/no) otherwise type (int) if you want to convert all floats to integers: ")
-        response = 'int'
+        response = input("Do you want to continue processing? (yes/no) otherwise type (int) if you want to convert all floats to integers: ")
         if response.lower() == 'yes':
             print("Continuing with processing...")
-            return True, matrix
+            return True, m
         elif response.lower() == 'int':
-            matrix = matrix.astype(int)  # Convert all float values to integers
+            m = m.astype(int)  # Convert all float values to integers
             print("Converted matrix to integers.")
-            return True, matrix  # Return the converted matrix
+            return True, m  # Return the converted matrix
         else:
             print("Exiting process.")
             return False, None
@@ -54,144 +53,11 @@ def check_values(matrix):
         print("The provided matrix is not a CSR matrix.")
 
 
-def good_turing_ambient_pool(data, low_count_gene_sums):
-    # flatten the 1x22040 2D np-matrix since it led to errors in hashing using "Counter"
-    counts = np.asarray(low_count_gene_sums)
-    counts = counts.flatten() if counts.ndim > 1 else counts
-
-    # Calculate frequency distribution (sorted increasing)
-    frequency_distribution = Counter(counts)
-    # Total number of unique items
-    n = sum(frequency_distribution.values())
-    # Initialize Good-Turing proportions dictionary
-    good_turing_proportions = {}
-
-    # Calculate Good-Turing proportions to avoid having genes with zero counts in the ambient pool
-    for r in tqdm(range(max(counts) + 1), desc="Calculating Good-Turing Proportions"):
-        n_r = frequency_distribution.get(r, 0)  # Number of items with count r
-        n_r_plus_1 = frequency_distribution.get(r + 1, 1)  # Number of items with count r + 1
-
-        if n_r > 0:  # Only calculate for observed frequencies
-            # habe jetzt einfach n_r_plus_1 auf =1 gesetzt falls es nicht ex., sonst vielleicht auch einfach and n_r_plus_1 > 0 fordern?
-            good_turing_proportions[r] = (r + 1) * n_r_plus_1 / n
-
-    # Handle unseen events (count = 0) => common practice = N1/N
-    good_turing_proportions[0] = frequency_distribution.get(1, 0) / n #ändert in dem fall nix, da erstes N0 = 0, somit (0+1)*N1 und somit N1/N gilt
-
-    # Normalize the proportions to sum to 1
-    total_proportion = sum(good_turing_proportions.values())
-    for r in tqdm(good_turing_proportions, desc="Normalizing Proportions"):
-        good_turing_proportions[r] /= total_proportion
-
-    # Ensure normalization is correct
-    normalized_total = sum(good_turing_proportions.values())
-    assert abs(normalized_total - 1.0) < 1e-6, f"Proportions do not sum to 1: {normalized_total}"
-
-    # Create an array to hold results
-    gene_expectations = np.zeros_like(counts, dtype=float)
-    # Fill in the results regarding the proportions
-    ambient_proportions = {}
-
-    # Get all gene_names
-    gene_names = data.var_names
-
-    for i, count in tqdm(enumerate(counts), desc="Filling Ambient Proportions", total=len(counts)):
-        proportion = good_turing_proportions.get(count, 0)
-        gene_expectations[i] = proportion
-        ambient_proportions[gene_names[i]] = proportion
-
-    return gene_names, ambient_proportions, gene_expectations
-
-
-def estimate_alpha(ambient_set_g, gene_proportions):
-    """
-    Estimates alpha by maximizing the Dirichlet-Multinomial likelihood.
-
-    # we need to compute the log-likelihood for all barcodes in the ambient set G, by summing the log L_b values for each barcode
-
-    Parameters:
-        counts (numpy.ndarray): Gene-by-barcode count matrix (G x B).
-        proportions (numpy.ndarray): Ambient RNA proportions (G,).
-
-    Returns:
-        float: Estimated alpha.
-    """
-    alpha = 1.0 # initial guessed alpha
-    total_log_likelihood = 0
-    product = [1.0]
-
-    batch_size = ambient_set_g.shape[0] // 100
-
-    # iterate over all barcodes
-    for i in tqdm(range(0, ambient_set_g.shape[0] - 1, batch_size), desc="Estimate (global) alpha", position=0, leave=True):
-        # batch extraction
-        batch = ambient_set_g[i: i+ batch_size]
-
-        # p_g = proportions
-        total_counts = batch.X.sum(axis=0).A1
-        # reduce dimension of total_counts
-
-        y_gb = np.asarray(batch.X.A)  # .flatten() #convert sparse matrix to dense array for calculations
-        #alpha_p_g = gene_proportions * alpha
-        # product = product * np.log( gamma(y_gb + alpha_p_g) / ( factorial(y_gb) * gamma(alpha_p_g) ) )
-
-        product = product * np.log((gamma(y_gb + gene_proportions)) / (factorial(y_gb) * (gene_proportions)))
-    l_b = (factorial(total_counts) * gamma(alpha)) / np.log(gamma(total_counts + alpha) * product)
-
-    # Convert L_b to log-space and sum
-    l_b = np.nanmean(l_b)
-    total_log_likelihood += np.log(l_b)
-    print(f"total_log_likelihood: {total_log_likelihood}")
-
-    return -total_log_likelihood # Return negative for minimization
-
-
-
-def maximum_likelihood_estimate(alpha, batch_barcodes, p_g, batch_size=10000):
-    # p_g = proportions
-    total_counts = batch_barcodes.X.sum(axis=0).A1
-    # reduce dimension of total_counts
-    product = 1.0
-
-    y_gb = np.asarray(batch_barcodes.X.A)#.flatten() #convert sparse matrix to dense array for calculations
-    alpha_p_g = p_g * alpha
-    #product = product * np.log( gamma(y_gb + alpha_p_g) / ( factorial(y_gb) * gamma(alpha_p_g) ) )
-    product = product * ( np.log(gamma(y_gb + alpha_p_g)) / (factorial(y_gb) * (alpha_p_g)) )
-    l_b = ( factorial(total_counts) * gammaln(alpha) ) / np.log( gamma(total_counts + alpha) * product )
-
-    return l_b
-
-    # total_counts = data.X[barcode].sum()
-    # product = 1
-    # rows, cols = data.X[barcode].nonzero()
-    #
-    # for gene_idx in cols:
-    #     y_gb = data.X[barcode, gene_idx]
-    #
-    #     gene_name = data.var_names[gene_idx]
-    #     p_g = ambient_proportions[gene_name]
-    #
-    #     alpha_p_g = alpha * p_g
-    #
-    #     if y_gb== 0:
-    #         print("y_gb: ", y_gb)
-    #     if p_g == 0:
-    #         print("p_g: ", p_g)
-    #
-    #     # log reingefuchst, da sonst das produkt der MLE immer kleiner wird und so gegen 0 geht
-    #     product = product * log( gamma(y_gb + alpha_p_g) / ( factorial(y_gb) * gamma(alpha_p_g) )
-    #                         )
-    #
-    # l_b = ( factorial(total_counts) * gamma(alpha) ) / ( gamma(total_counts + alpha) * product )
-    #
-    # return l_b
-
-
 
 """
 Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.
 ------ INPUT ------
-data.X             = A numeric matrix object - usually a dgTMatrix or dgCMatrix - containing droplet data prior to
+m             = A numeric matrix object - usually a dgTMatrix or dgCMatrix - containing droplet data prior to
                 any filtering or cell calling. Columns represent barcoded droplets, rows represent genes.
 lower         = numeric scalar specifying the lower bound on the total UMI count
 retain        = Barcodes that contain more than retain total counts are always retained. This ensures that large
@@ -213,53 +79,195 @@ The metadata of the output DataFrame will contains the ambient profile in ambien
 of alpha, the specified value of lower (possibly altered by use.rank) and the number of iterations in niters.
 For emptyDrops, the metadata will also contain the retention threshold in retain.
 """
-def empty_drops(data, lower=100, retain=None, barcode_args: list = None, test_ambient=False):
-    # remove all genes which aren't representif in one barcode
-    print(f"{(data.X.sum(axis=0).A1 == 0).sum()} genes filtered out since sum(counts) over the gene was 0.")
-    sc.pp.filter_genes(data, min_counts=1)
-
-    low_count_barcode_mask = data.X.sum(axis=1).A1 <= 50  # axis=1 summing every value in row
-    high_count_barcodes = data[low_count_barcode_mask==False]
-    # Sum counts for each gene (axis=0/column) but only for low-count barcodes (-> in low_count_mask rows labeled as True)
-    low_count_gene_sums = data.X[low_count_barcode_mask].sum(axis=0)
-
-    print
 
 
-    # ----------------------
-    # CREATE AMBIENT PROFILE
-    # ----------------------
-    # gene_expectations is np array with 20025 genes, ambient_proportions is dict with genes and their expectation
-    gene_names, ambient_proportions, gene_expectations = good_turing_ambient_pool(data, low_count_gene_sums)
+def empty_drops(data, lower=100, ignore=None, niters=10000, fdr=0.001):
+    """Run the EmptyDrops procedure."""
+    m = data.X
+    gene_sums_mask = m.sum(axis=0).A1 == 0
+    m = m[:, ~gene_sums_mask]
+    print(f"{gene_sums_mask.sum()} genes filtered out as their sum across all barcodes is zero.")
 
-    # calculate global alpha out of low_count_barcodes
-    ambient_set_g = data[low_count_barcode_mask]
-    alpha = estimate_alpha(ambient_set_g, gene_expectations)
-    # dauert knapp 47 Stunden
+    ambient_proportions = ambient_profile(m, lower)
+
+    if ignore is not None:
+        print(f"Ignoring barcodes with total counts ≤ {ignore}.")
+        high_count_mask = (m.sum(axis=1).A1 > lower) & (m.sum(axis=1).A1> ignore)
+    else:
+        high_count_mask = m.sum(axis=1).A1 > lower
+
+    results = test_empty_drops(m[high_count_mask], ambient_proportions, niters=niters)
+
+    # Adjust p-values
+    adjusted_pvalues = multipletests(results['PValue'], method='fdr_bh', alpha=fdr)[1]
+    results['AdjPValue'] = adjusted_pvalues
+    results['IsCell'] = results['AdjPValue'] < fdr
+    return results
 
 
-    # calculate likelihoods using global alpha for high_count_barcodes
-    likelihoods = []
-    for idx, barcode in enumerate (high_count_barcodes):
-        likelihood = maximum_likelihood_est
+def test_empty_drops(m, ambient_proportions, niters=10000):
+    """Test each barcode for significant deviation from the ambient profile."""
+    results = []
+    total_counts = m.sum(axis=1).A
+    for idx in range(m.shape[0]):
+        count_vector = m[idx].A
+        if count_vector.sum() == 0:  # Skip empty rows
+            continue
 
-    # test for barcode 2
-    likelihood_barcode = maximum_likelihood_estimate(1, 2, ambient_proportions, data)
-    print("likelihood_barcode 2: ", likelihood_barcode)
+        # Compute observed multinomial probability
+        ambient_vector = np.array([ambient_proportions.get(c, 0) for c in count_vector])
+        ambient_vector /= ambient_vector.sum()
+        observed_prob = multinomial.pmf(count_vector, count_vector.sum(), ambient_vector)
+
+        # Simulate null probabilities
+        simulated_probs = []
+        for _ in range(niters):
+            sim_vector = np.random.multinomial(count_vector.sum(), ambient_vector)
+            sim_prob = multinomial.pmf(sim_vector, count_vector.sum(), ambient_vector)
+            simulated_probs.append(sim_prob)
+
+        p_value = np.mean([sim <= observed_prob for sim in simulated_probs])
+        results.append({'Barcode': idx, 'TotalCounts': total_counts[idx], 'PValue': p_value})
+
+    return pd.DataFrame(results)
+
+
+def ambient_profile(m, lower, by_rank = None, good_turing = True):
+    """
+    Computes proportions for low-count sums in an HDF5 sparse matrix.
+
+    Parameters:
+    m : scipy.sparse matrix
+        The input sparse matrix.
+    lower : int
+        Threshold for determining low-count rows based on their sum.
+    by_rank : None or array-like, optional
+        Ignored in this implementation, but kept for potential future extensions.
+    good_turing : bool, optional
+        Whether to apply Good-Turing smoothing to proportions.
+
+    Returns:
+    np.ndarray
+        Array of proportions computed from low-count sums.
+    """
+    low_count_mask = np.array(m.sum(axis=1).A1 <= lower).flatten()
+    low_count_sums = m[low_count_mask].sum(axis=0).A1
+    if good_turing:
+        proportions = good_turing_proportions(low_count_sums)
+    else:
+        proportions = low_count_sums / low_count_sums.sum()
+    return proportions
+
+
+
+def good_turing_proportions(counts):
+    frequency_distribution = Counter(counts)
+    n = sum(frequency_distribution.values())
+    proportions = {}
+
+    for r in range(max(counts) + 1):
+        n_r = frequency_distribution.get(r, 0)
+        n_r_plus_1 = frequency_distribution.get(r + 1, 0)
+        if n_r > 0:
+            proportions[r] = (r + 1) * n_r_plus_1 / n
+    proportions[0] = frequency_distribution.get(1, 0) / n
+    total_proportion = sum(proportions.values())
+    for r in proportions:
+        proportions[r] /= total_proportion
+    return proportions
 
 
 
 
-    # log_probs = np.array([ss.multinomial.logpmf(data.X[:, i], n=data.X[:, i].sum(), p=0.1) for i in range(data.X.shape[1])])
 
-    # significant_deviations = compute_significant_deviations(high_count_barcodes, ambient_proportions, gene_names)
-    #print(f"Identified {len(significant_deviations)} barcodes with significant deviations.")
+def compute_multinom_prob_rest(totals, alpha=np.inf):
+    """
+    Efficiently calculates the total-dependent component of the multinomial log-probability.
 
-    # wir haben nun high_count barcodes gegen deviation getestet, teste NUN *ALLE BARCODES* gegen deviations
-    # the null model assumes that the counts in each barcode (bzw. droplet) originate solely from the ambient RNA pool,
-    # meaning they are FULLY random (+++representative of the background noise).
+    Parameters:
+    totals : np.ndarray
+        Array of total counts.
+    alpha : float, optional
+        The dispersion parameter. Default is infinity (no dispersion).
 
-    # For every barcode, the probability of obbtaining the specific count vector based on the null model is computed.
+    Returns:
+    np.ndarray
+        The computed multinomial log-probabilities for the given totals and alpha.
+    """
+    # Check for infinite alpha (no dispersion case)
+    if np.isinf(alpha):
+        # Compute log-factorial of totals
+        return gammaln(totals + 1)
+    else:
+        # Compute the log-probability component for given totals and alpha
+        return gammaln(totals + 1) + gammaln(alpha) - gammaln(totals + alpha)
+
+
+
+def estimate_alpha(h5_sparse_matrix, prop, totals, interval=(0.01, 10000)):
+    """
+    Efficiently finds the MLE for the overdispersion parameter of a Dirichlet-multinomial distribution
+    using an HDF5 sparse matrix as input.
+
+    Parameters:
+    h5_sparse_matrix : scipy.sparse.csr_matrix
+        The input HDF5 sparse matrix.
+    prop : np.ndarray
+        Proportions array corresponding to the rows of the matrix.
+    totals : np.ndarray
+        Array of total counts.
+    interval : tuple, optional
+        Interval for optimization (default: (0.01, 10000)).
+
+    Returns:
+    float
+        The estimated alpha value (MLE).
+    """
+
+    # Ensure matrix is in CSR format for efficient row access
+    if not isinstance(h5_sparse_matrix, csr_matrix):
+        h5_sparse_matrix = csr_matrix(h5_sparse_matrix)
+
+    # Extract non-zero indices and values
+    row_indices, col_indices = h5_sparse_matrix.nonzero()
+    nz_vals = np.array(h5_sparse_matrix.data)
+
+    # Map proportions to the non-zero rows
+    per_prop = prop[row_indices]
+
+    def log_likelihood(alpha):
+        """
+        Computes the log-likelihood for a given alpha.
+
+        Parameters:
+        alpha : float
+            The current value of alpha.
+
+        Returns:
+        float
+            The log-likelihood for the given alpha.
+        """
+        if alpha <= 0:
+            return -np.inf  # Log-likelihood undefined for non-positive alpha
+
+        prop_alpha = per_prop * alpha
+        log_lik = (
+                gammaln(alpha) * len(totals)
+                - np.sum(gammaln(totals + alpha))
+                + np.sum(gammaln(nz_vals + prop_alpha))
+                - np.sum(gammaln(prop_alpha))
+        )
+        return log_lik
+
+    # Optimize to find the alpha that maximizes the log-likelihood
+    result = minimize_scalar(
+        lambda alpha: -log_likelihood(alpha),  # Minimize negative log-likelihood
+        bounds=interval,
+        method='bounded'
+    )
+
+    return result.x
+
 
 
 def main():
