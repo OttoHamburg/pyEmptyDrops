@@ -222,3 +222,132 @@ def run_empty_drops(
         )
     
     return results_df, metadata, adata
+
+
+def main():
+    """Command-line interface."""
+    parser = argparse.ArgumentParser(
+        description="Run EmptyDrops analysis on 10x Genomics H5 files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic usage
+  python run_empty_drops.py input.h5
+  
+  # With custom output directory
+  python run_empty_drops.py input.h5 -o results/
+  
+  # With custom parameters
+  python run_empty_drops.py input.h5 --lower 200 --niters 5000
+  
+  # Without plotting
+  python run_empty_drops.py input.h5 --no-plot
+  
+  # Import as module
+  from run_empty_drops import run_empty_drops
+  results_df, metadata, adata = run_empty_drops('input.h5')
+        """
+    )
+    
+    parser.add_argument(
+        'input_file',
+        type=str,
+        help='Path to input 10x H5 file'
+    )
+    
+    parser.add_argument(
+        '-o', '--output-dir',
+        type=str,
+        default='.',
+        help='Output directory for results (default: current directory)'
+    )
+    
+    parser.add_argument(
+        '--output-prefix',
+        type=str,
+        default=None,
+        help='Prefix for output files (default: input filename without extension)'
+    )
+    
+    parser.add_argument(
+        '--lower',
+        type=int,
+        default=100,
+        help='Lower threshold for testing (default: 100)'
+    )
+    
+    parser.add_argument(
+        '--niters',
+        type=int,
+        default=10000,
+        help='Number of Monte Carlo iterations (default: 10000)'
+    )
+    
+    parser.add_argument(
+        '--retain',
+        type=int,
+        default=None,
+        help='Retain threshold (default: auto-calculate)'
+    )
+    
+    parser.add_argument(
+        '--max-batches',
+        type=int,
+        default=100,
+        help='Maximum number of batches for optimization (default: 100)'
+    )
+    
+    parser.add_argument(
+        '--no-plot',
+        action='store_true',
+        help='Disable barcode rank plot generation'
+    )
+    
+    parser.add_argument(
+        '--gex-only',
+        action='store_true',
+        default=True,
+        help='Use only Gene Expression data (default: True)'
+    )
+    
+    parser.add_argument(
+        '--all-features',
+        action='store_true',
+        help='Use all features (overrides --gex-only)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Check if input file exists
+    if not os.path.exists(args.input_file):
+        print(f"Error: Input file not found: {args.input_file}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Determine GEX-only setting
+    gex_only = args.gex_only and not args.all_features
+    
+    # Run analysis
+    try:
+        results_df, metadata, adata = run_empty_drops(
+            input_file=args.input_file,
+            output_dir=args.output_dir,
+            lower=args.lower,
+            niters=args.niters,
+            retain=args.retain,
+            max_batches=args.max_batches,
+            plot=not args.no_plot,
+            gex_only=gex_only,
+            output_prefix=args.output_prefix
+        )
+        
+        print("\n✓ EmptyDrops analysis completed successfully!")
+        
+    except Exception as e:
+        print(f"\n✗ Error during EmptyDrops analysis: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
