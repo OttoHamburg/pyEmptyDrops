@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Production-ready EmptyDrops runner script.
+
+This script can be used as a command-line tool or imported as a module.
+It provides plotting functionality and saves results as CSV and H5AD files.
 """
 
 import argparse
