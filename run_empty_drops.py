@@ -75,3 +75,55 @@ def plot_barcode_ranks(
     plt.close()
     
     print(f"Barcode rank plot saved to: {output_path}")
+
+
+def save_results(
+    results_df: pd.DataFrame,
+    metadata: dict,
+    output_prefix: str,
+    save_csv: bool = True,
+    save_h5ad: bool = True,
+    original_data: Optional[sc.AnnData] = None
+):
+    """
+    Save EmptyDrops results as CSV and/or H5AD files.
+    
+    Parameters
+    ----------
+    results_df : pd.DataFrame
+        EmptyDrops results DataFrame
+    metadata : dict
+        Metadata dictionary
+    output_prefix : str
+        Prefix for output files (without extension)
+    save_csv : bool
+        Whether to save CSV file
+    save_h5ad : bool
+        Whether to save H5AD file
+    original_data : sc.AnnData, optional
+        Original AnnData object (needed for H5AD output)
+    """
+    if save_csv:
+        csv_path = f"{output_prefix}_results.csv"
+        results_df.to_csv(csv_path, index=True)
+        print(f"Results saved to CSV: {csv_path}")
+    
+    if save_h5ad and original_data is not None:
+        # Add results to AnnData object
+        for col in results_df.columns:
+            original_data.obs[col] = results_df[col].values
+        
+        # Store metadata in AnnData uns
+        original_data.uns['empty_drops'] = metadata
+        
+        h5ad_path = f"{output_prefix}_results.h5ad"
+        original_data.write(h5ad_path)
+        print(f"Results saved to H5AD: {h5ad_path}")
+    
+    # Save metadata as JSON if CSV is saved
+    if save_csv:
+        import json
+        json_path = f"{output_prefix}_metadata.json"
+        with open(json_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        print(f"Metadata saved to: {json_path}")
