@@ -17,7 +17,7 @@ import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 
-from empty_drops_v5_batched import empty_drops_v5_batched
+from empty_drops_v5_batched import empty_drops
 
 
 def plot_barcode_ranks(
@@ -189,7 +189,7 @@ def run_empty_drops(
     print(f"Loaded data: {adata.shape[0]} cells × {adata.shape[1]} genes")
     
     # Run EmptyDrops
-    results_df, metadata = empty_drops_v5_batched(
+    results_df, metadata = empty_drops(
         adata.copy(),
         lower=lower,
         niters=niters,
@@ -235,19 +235,19 @@ def main():
         epilog="""
 Examples:
   # Basic usage
-  python run_empty_drops.py input.h5
+  python empty_drops.py input.h5
   
   # With custom output directory
-  python run_empty_drops.py input.h5 -o results/
+  python empty_drops.py input.h5 -o results/
   
   # With custom parameters
-  python run_empty_drops.py input.h5 --lower 200 --niters 5000
+  python empty_drops.py input.h5 --lower 200 --niters 5000
   
   # Without plotting
-  python run_empty_drops.py input.h5 --no-plot
+  python empty_drops.py input.h5 --no-plot
   
   # Import as module
-  from run_empty_drops import run_empty_drops
+  from empty_drops import run_empty_drops
   results_df, metadata, adata = run_empty_drops('input.h5')
         """
     )

@@ -1,10 +1,10 @@
-# EmptyDrops Runner
+# pyEmptyDrops Documentation
 
 Production-ready command-line tool and Python module for running EmptyDrops analysis on 10x Genomics single-cell RNA sequencing data.
 
 ## Overview
 
-`run_empty_drops.py` provides a streamlined interface to the EmptyDrops algorithm, which identifies real cells from ambient RNA in droplet-based single-cell sequencing experiments. The script can be used both as a command-line tool and as an importable Python module.
+`empty_drops.py` provides a streamlined interface to the EmptyDrops algorithm, which identifies real cells from ambient RNA in droplet-based single-cell sequencing experiments. The script can be used both as a command-line tool and as an importable Python module.
 
 ## Installation
 
@@ -21,31 +21,31 @@ pip install numpy pandas scanpy matplotlib scipy statsmodels numba tqdm
 Basic usage:
 
 ```bash
-python run_empty_drops.py input.h5
+python empty_drops.py input.h5
 ```
 
 With custom output directory:
 
 ```bash
-python run_empty_drops.py input.h5 -o results/
+python empty_drops.py input.h5 -o results/
 ```
 
 With custom parameters:
 
 ```bash
-python run_empty_drops.py input.h5 --lower 200 --niters 5000
+python empty_drops.py input.h5 --lower 200 --niters 5000
 ```
 
 Without plotting:
 
 ```bash
-python run_empty_drops.py input.h5 --no-plot
+python empty_drops.py input.h5 --no-plot
 ```
 
 ### Python Module
 
 ```python
-from run_empty_drops import run_empty_drops
+from empty_drops import run_empty_drops
 
 results_df, metadata, adata = run_empty_drops(
     'input.h5',
@@ -141,7 +141,7 @@ The EmptyDrops algorithm compares observed gene expression patterns against an a
 
 ## Performance
 
-The batched implementation (v5) provides significant performance improvements:
+The batched implementation provides significant performance improvements:
 
 - Up to 68x reduction in computational overhead through intelligent batching
 - Typical runtime: ~2-3 minutes for 10,000 iterations on datasets with ~15,000 test barcodes
@@ -152,7 +152,7 @@ The batched implementation (v5) provides significant performance improvements:
 ### Standard Analysis
 
 ```bash
-python run_empty_drops.py data/raw_feature_bc_matrix.h5
+python empty_drops.py data/raw_feature_bc_matrix.h5
 ```
 
 This will:
@@ -164,7 +164,7 @@ This will:
 ### Quick Test Run
 
 ```bash
-python run_empty_drops.py data/raw_feature_bc_matrix.h5 --niters 1000 --lower 200
+python empty_drops.py data/raw_feature_bc_matrix.h5 --niters 1000 --lower 200
 ```
 
 Reduces iterations for faster testing and uses a higher lower threshold.
@@ -172,7 +172,7 @@ Reduces iterations for faster testing and uses a higher lower threshold.
 ### Production Run with Custom Output
 
 ```bash
-python run_empty_drops.py data/raw_feature_bc_matrix.h5 \
+python empty_drops.py data/raw_feature_bc_matrix.h5 \
     --output-dir results/ \
     --output-prefix experiment1 \
     --niters 20000 \
@@ -183,7 +183,7 @@ python run_empty_drops.py data/raw_feature_bc_matrix.h5 \
 
 ```python
 import glob
-from run_empty_drops import run_empty_drops
+from empty_drops import run_empty_drops
 
 for h5_file in glob.glob("data/*.h5"):
     print(f"Processing {h5_file}...")

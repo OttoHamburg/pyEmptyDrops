@@ -71,3 +71,5 @@ Thumbs.db
 # HTML
 *.html
 
+test_output/
+test_run.log

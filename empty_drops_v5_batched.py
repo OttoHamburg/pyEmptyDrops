@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Batched EmptyDrops implementation (v5).
+Batched EmptyDrops implementation.
 
 This version addresses the core bottleneck: too many multinomial calls.
 Key insight: Instead of 4791 unique totals × 50 iterations = 239,550 calls,
@@ -45,7 +45,7 @@ def _create_total_batches_working(unique_totals, total_lengths, max_batches=100)
     """
     WORKING batching strategy (from successful 20251024_120753 run).
     
-    This is the ORIGINAL v5 approach that achieved:
+    This approach achieved:
     - 68.4x reduction (70 batches from 4791 unique totals)
     - Accurate FDR: 517, 7474, 8187
     
@@ -302,7 +302,7 @@ def barcode_ranks_batched(data_csr, lower=100, exclude_from=50):
 
 # --- Main Batched EmptyDrops Function ---
 
-def empty_drops_v5_batched(
+def empty_drops(
     data: sc.AnnData,
     lower: int = 100,
     niters: int = 10000,
@@ -311,12 +311,12 @@ def empty_drops_v5_batched(
     return_metadata: bool = False
 ):
     """
-    Batched EmptyDrops implementation (v5).
+    Batched EmptyDrops implementation.
     
     Dramatically reduces multinomial calls by batching similar total counts.
     """
     start_time = time.time()
-    print("--- Starting EmptyDrops v5 (Batched) ---")
+    print("--- Starting EmptyDrops (Batched) ---")
     
     original_data = data.copy()
     
@@ -436,7 +436,7 @@ def empty_drops_v5_batched(
     
     end_time = time.time()
     total_runtime = end_time - start_time
-    print(f"--- EmptyDrops v5 finished in {total_runtime:.2f} seconds ---")
+    print(f"--- EmptyDrops finished in {total_runtime:.2f} seconds ---")
     
     # Calculate FDR summary statistics
     fdr_001 = (results_df['FDR'] <= 0.001).sum()
@@ -461,7 +461,7 @@ def empty_drops_v5_batched(
             'total_cells': len(results_df),
             'tested_cells': int((results_df['PValue'].notna()).sum()),
             'data_shape': f"{original_data.shape[0]}x{original_data.shape[1]}",
-            'version': 'v5_batched',
+            'version': 'batched',
             'batches_used': len(batched_totals),
             'reduction_factor': round(reduction_factor, 1)
         }
