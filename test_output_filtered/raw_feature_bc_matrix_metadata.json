@@ -1,0 +1,16 @@
+{
+  "timestamp": "20251030_142257",
+  "niters": 50,
+  "fdr_0_001": 517,
+  "fdr_0_01": 517,
+  "fdr_0_05": 8079,
+  "calculated_retain": 10754,
+  "lower": 100,
+  "runtime_seconds": 2.79,
+  "total_cells": 722431,
+  "tested_cells": 15000,
+  "data_shape": "722431x22040",
+  "version": "batched",
+  "batches_used": 70,
+  "reduction_factor": 68.4
+}

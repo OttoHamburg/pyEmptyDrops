@@ -4,7 +4,7 @@ Production-ready command-line tool and Python module for running EmptyDrops anal
 
 ## Overview
 
-`empty_drops.py` provides a streamlined interface to the EmptyDrops algorithm, which identifies real cells from ambient RNA in droplet-based single-cell sequencing experiments. The script can be used both as a command-line tool and as an importable Python module.
+`run_empty_drops.py` provides a streamlined interface to the EmptyDrops algorithm, which identifies real cells from ambient RNA in droplet-based single-cell sequencing experiments. The script can be used both as a command-line tool and as an importable Python module.
 
 ## Installation
 
@@ -21,31 +21,31 @@ pip install numpy pandas scanpy matplotlib scipy statsmodels numba tqdm
 Basic usage:
 
 ```bash
-python empty_drops.py input.h5
+python run_empty_drops.py input.h5
 ```
 
 With custom output directory:
 
 ```bash
-python empty_drops.py input.h5 -o results/
+python run_empty_drops.py input.h5 -o results/
 ```
 
 With custom parameters:
 
 ```bash
-python empty_drops.py input.h5 --lower 200 --niters 5000
+python run_empty_drops.py input.h5 --lower 200 --niters 5000
 ```
 
 Without plotting:
 
 ```bash
-python empty_drops.py input.h5 --no-plot
+python run_empty_drops.py input.h5 --no-plot
 ```
 
 ### Python Module
 
 ```python
-from empty_drops import run_empty_drops
+from run_empty_drops import run_empty_drops
 
 results_df, metadata, adata = run_empty_drops(
     'input.h5',
@@ -90,9 +90,9 @@ A comma-separated values file containing EmptyDrops results with the following c
 
 ### H5AD File (`sample_results.h5ad`)
 
-An AnnData object (HDF5 format) containing:
+An AnnData object (HDF5 format) containing **only cells with FDR <= 0.05**:
 
-- All original expression data
+- Filtered expression data (only cells passing FDR threshold)
 - Results in `obs` (observations/barcodes) table:
   - `Total`: Total UMI count per barcode
   - `PValue`: EmptyDrops p-values
@@ -104,12 +104,14 @@ An AnnData object (HDF5 format) containing:
   - `calculated_retain`: Automatically calculated knee point
   - `lower`: Lower threshold used
   - `runtime_seconds`: Total runtime
-  - `total_cells`: Total number of barcodes
+  - `total_cells`: Total number of barcodes (before filtering)
   - `tested_cells`: Number of barcodes tested
-  - `data_shape`: Original data dimensions
+  - `data_shape`: Original data dimensions (before filtering)
   - `version`: Algorithm version used
   - `batches_used`: Number of batches used for optimization
   - `reduction_factor`: Computational reduction factor achieved
+
+**Note**: The H5AD file contains only cells with FDR <= 0.05 for easier downstream analysis. The CSV file contains all cells for reference.
 
 ### Metadata JSON (`sample_metadata.json`)
 
@@ -152,7 +154,7 @@ The batched implementation provides significant performance improvements:
 ### Standard Analysis
 
 ```bash
-python empty_drops.py data/raw_feature_bc_matrix.h5
+python run_empty_drops.py data/raw_feature_bc_matrix.h5
 ```
 
 This will:
@@ -164,7 +166,7 @@ This will:
 ### Quick Test Run
 
 ```bash
-python empty_drops.py data/raw_feature_bc_matrix.h5 --niters 1000 --lower 200
+python run_empty_drops.py data/raw_feature_bc_matrix.h5 --niters 1000 --lower 200
 ```
 
 Reduces iterations for faster testing and uses a higher lower threshold.
@@ -172,7 +174,7 @@ Reduces iterations for faster testing and uses a higher lower threshold.
 ### Production Run with Custom Output
 
 ```bash
-python empty_drops.py data/raw_feature_bc_matrix.h5 \
+python run_empty_drops.py data/raw_feature_bc_matrix.h5 \
     --output-dir results/ \
     --output-prefix experiment1 \
     --niters 20000 \
@@ -183,7 +185,7 @@ python empty_drops.py data/raw_feature_bc_matrix.h5 \
 
 ```python
 import glob
-from empty_drops import run_empty_drops
+from run_empty_drops import run_empty_drops
 
 for h5_file in glob.glob("data/*.h5"):
     print(f"Processing {h5_file}...")
