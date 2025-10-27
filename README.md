@@ -8,11 +8,60 @@ Production-ready command-line tool and Python module for running EmptyDrops anal
 
 ## Installation
 
-Ensure you have the required dependencies installed:
+### Requirements
+
+The following packages are required:
+
+- Python >= 3.9
+- numpy >= 1.26.0
+- pandas >= 2.2.0
+- scanpy >= 1.10.0
+- matplotlib >= 3.9.0
+- scipy >= 1.13.0
+- statsmodels >= 0.14.0
+- numba >= 0.60.0
+- tqdm >= 4.67.0
+
+**Note**: `scanpy` automatically installs `anndata` as a dependency.
+
+### Installation Methods
+
+**Option 1: Using pip**
 
 ```bash
 pip install numpy pandas scanpy matplotlib scipy statsmodels numba tqdm
 ```
+
+**Option 2: Using requirements.txt**
+
+Create a `requirements.txt` file with:
+```
+numpy>=1.26.0
+pandas>=2.2.0
+scanpy>=1.10.0
+matplotlib>=3.9.0
+scipy>=1.13.0
+statsmodels>=0.14.0
+numba>=0.60.0
+tqdm>=4.67.0
+```
+
+Then install:
+```bash
+pip install -r requirements.txt
+```
+
+**Tested Versions:**
+- Python 3.9.6
+- numpy 1.26.4
+- pandas 2.2.3
+- scanpy 1.10.3
+- matplotlib 3.9.4
+- scipy 1.13.1
+- statsmodels 0.14.4
+- numba 0.60.0
+- tqdm 4.67.1
+- anndata 0.10.9
 
 ## Usage
 
