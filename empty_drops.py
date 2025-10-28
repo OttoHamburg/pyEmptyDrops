@@ -411,9 +411,14 @@ def empty_drops(
     print("Step 5: Calculating p-values and FDR...")
     p_values = (n_above_array + 1) / (niters + 1)
     
+    # Calculate Limited field: indicates if p-value is lower-bounded by niters
+    limited = n_above_array == 0
+    
     results_df = pd.DataFrame(index=original_data.obs_names)
     results_df['Total'] = np.asarray(original_data.X.sum(axis=1)).flatten()
     results_df.loc[original_data.obs_names[test_mask], 'PValue'] = p_values
+    results_df['Limited'] = False
+    results_df.loc[original_data.obs_names[test_mask], 'Limited'] = limited
     
     if retain is None:
         try:
@@ -442,11 +447,13 @@ def empty_drops(
     fdr_001 = (results_df['FDR'] <= 0.001).sum()
     fdr_01 = (results_df['FDR'] <= 0.01).sum()
     fdr_05 = (results_df['FDR'] <= 0.05).sum()
+    limited_count = limited.sum()
     
     print("\\n--- Results Summary ---")
     print(f"FDR <= 0.001: {fdr_001}")
     print(f"FDR <= 0.01:  {fdr_01}")
     print(f"FDR <= 0.05:  {fdr_05}")
+    print(f"Limited p-values: {limited_count} (may need more iterations if significant)")
     
     if return_metadata:
         metadata = {
@@ -455,6 +462,7 @@ def empty_drops(
             'fdr_0_001': int(fdr_001),
             'fdr_0_01': int(fdr_01),
             'fdr_0_05': int(fdr_05),
+            'limited_count': int(limited_count),
             'calculated_retain': int(retain) if retain is not None else None,
             'lower': lower,
             'runtime_seconds': round(total_runtime, 2),
