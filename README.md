@@ -24,6 +24,30 @@ The following packages are required:
 
 **Note**: `scanpy` automatically installs `anndata` as a dependency.
 
+### Recommended: Use a Virtual Environment
+
+It is strongly recommended to use a Python virtual environment to avoid conflicts with other Python packages:
+
+```bash
+# Create a virtual environment
+python3 -m venv venv
+
+# Activate the virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Why use a virtual environment?**
+- Prevents conflicts with system-wide Python packages
+- Ensures reproducible environments across different machines
+- Easily isolate project dependencies
+- Can be deleted and recreated without affecting system Python
+
 ### Installation Methods
 
 **Option 1: Using pip**
