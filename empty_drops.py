@@ -420,6 +420,10 @@ def empty_drops(
     results_df['Limited'] = False
     results_df.loc[original_data.obs_names[test_mask], 'Limited'] = limited
     
+    # Store log-probabilities for diagnostic purposes
+    results_df['LogProb'] = np.nan
+    results_df.loc[original_data.obs_names[test_mask], 'LogProb'] = obs_log_probs
+    
     if retain is None:
         try:
             retain = barcode_ranks_batched(data_csr, lower=lower)
@@ -456,6 +460,14 @@ def empty_drops(
     print(f"Limited p-values: {limited_count} (may need more iterations if significant)")
     
     if return_metadata:
+        # Calculate log-probability statistics
+        log_prob_stats = {
+            'logprob_mean': float(np.nanmean(obs_log_probs)),
+            'logprob_median': float(np.nanmedian(obs_log_probs)),
+            'logprob_min': float(np.nanmin(obs_log_probs)),
+            'logprob_max': float(np.nanmax(obs_log_probs))
+        }
+        
         metadata = {
             'timestamp': pd.Timestamp.now().strftime('%Y%m%d_%H%M%S'),
             'niters': niters,
@@ -471,7 +483,8 @@ def empty_drops(
             'data_shape': f"{original_data.shape[0]}x{original_data.shape[1]}",
             'version': 'batched',
             'batches_used': len(batched_totals),
-            'reduction_factor': round(reduction_factor, 1)
+            'reduction_factor': round(reduction_factor, 1),
+            **log_prob_stats
         }
         return results_df, metadata
     else:
