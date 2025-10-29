@@ -87,6 +87,72 @@ def plot_barcode_ranks(
     print(f"Barcode rank plot saved to: {output_path}")
 
 
+def plot_pvalue_distribution(
+    results_df: pd.DataFrame,
+    output_path: str,
+    title: str = "P-Value Distribution"
+):
+    """
+    Create a histogram of p-values for diagnostic purposes.
+    
+    Parameters
+    ----------
+    results_df : pd.DataFrame
+        EmptyDrops results DataFrame with PValue column
+    output_path : str
+        Path to save the PNG plot
+    title : str
+        Plot title
+    """
+    # Extract p-values for tested cells
+    pvalues = results_df['PValue'].dropna()
+    n_tested = len(pvalues)
+    
+    if n_tested == 0:
+        print("Warning: No p-values to plot")
+        return
+    
+    # Create the plot
+    plt.figure(figsize=(10, 6))
+    
+    # Create histogram with log scale on x-axis
+    bins = np.logspace(-4, 0, 50)  # From 0.0001 to 1.0 on log scale
+    plt.hist(pvalues, bins=bins, edgecolor='black', alpha=0.7, color='steelblue')
+    plt.xscale('log')
+    
+    # Add vertical lines for FDR thresholds
+    if 'FDR' in results_df.columns:
+        fdr_values = results_df['FDR'].dropna()
+        
+        # Find p-values corresponding to FDR thresholds
+        fdr_001_pvals = pvalues[fdr_values <= 0.001]
+        fdr_01_pvals = pvalues[fdr_values <= 0.01]
+        fdr_05_pvals = pvalues[fdr_values <= 0.05]
+        
+        if len(fdr_001_pvals) > 0:
+            plt.axvline(fdr_001_pvals.max(), color='darkgreen', linestyle='--', 
+                       linewidth=2, label='FDR ≤ 0.001 threshold')
+        if len(fdr_01_pvals) > 0:
+            plt.axvline(fdr_01_pvals.max(), color='orange', linestyle='--', 
+                       linewidth=2, label='FDR ≤ 0.01 threshold')
+        if len(fdr_05_pvals) > 0:
+            plt.axvline(fdr_05_pvals.max(), color='red', linestyle='--', 
+                       linewidth=2, label='FDR ≤ 0.05 threshold')
+    
+    plt.xlabel('P-Value (log10)', fontsize=12)
+    plt.ylabel('Frequency', fontsize=12)
+    plt.title(f"{title}\n(n={n_tested:,} tested barcodes)", fontsize=14, fontweight='bold')
+    plt.legend(loc='best', fontsize=10)
+    plt.grid(True, alpha=0.3, which='both')
+    plt.tight_layout()
+    
+    # Save the plot
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"P-value distribution plot saved to: {output_path}")
+
+
 def save_results(
     results_df: pd.DataFrame,
     metadata: dict,
@@ -249,6 +315,14 @@ def run_empty_drops(
             inflection=inflection_value,
             output_path=str(plot_path),
             title=f"Barcode Rank Plot - {Path(input_file).stem}"
+        )
+        
+        # Create p-value distribution plot
+        pval_plot_path = f"{output_prefix}_pvalue_distribution.png"
+        plot_pvalue_distribution(
+            results_df,
+            output_path=str(pval_plot_path),
+            title=f"P-Value Distribution - {Path(input_file).stem}"
         )
     
     return results_df, metadata, adata
