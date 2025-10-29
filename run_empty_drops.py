@@ -24,6 +24,7 @@ def plot_barcode_ranks(
     data_csr,
     lower: int,
     retain: int,
+    inflection: Optional[int],
     output_path: str,
     title: str = "Barcode Rank Plot"
 ):
@@ -38,6 +39,8 @@ def plot_barcode_ranks(
         Lower threshold (minimum UMI count to test)
     retain : int
         Calculated retain threshold (knee point)
+    inflection : int, optional
+        Inflection point threshold
     output_path : str
         Path to save the PNG plot
     title : str
@@ -61,6 +64,10 @@ def plot_barcode_ranks(
     if lower is not None and np.isfinite(lower):
         plt.axhline(y=lower, color='orange', linestyle=':', linewidth=2, 
                    label=f'Lower threshold ({lower})')
+    
+    if inflection is not None and np.isfinite(inflection):
+        plt.axhline(y=inflection, color='green', linestyle='-.', linewidth=2, 
+                   label=f'Inflection point ({inflection})')
     
     if retain is not None and np.isfinite(retain):
         plt.axhline(y=retain, color='red', linestyle='--', linewidth=2, 
@@ -229,6 +236,7 @@ def run_empty_drops(
     # Create plot if requested
     if plot:
         retain_value = metadata.get('calculated_retain', retain)
+        inflection_value = metadata.get('inflection_point')
         # Handle np.inf and None cases
         if retain_value is None or (isinstance(retain_value, float) and np.isinf(retain_value)):
             retain_value = None
@@ -238,6 +246,7 @@ def run_empty_drops(
             adata.X.tocsr(),
             lower=lower,
             retain=retain_value,
+            inflection=inflection_value,
             output_path=str(plot_path),
             title=f"Barcode Rank Plot - {Path(input_file).stem}"
         )

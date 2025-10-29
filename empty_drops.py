@@ -268,6 +268,9 @@ def barcode_ranks_batched(data_csr, lower=100, exclude_from=50):
     left_edge = edge_out["left"]
     right_edge = edge_out["right"]
     
+    # Inflection point is at the minimum of the first derivative (right_edge)
+    inflection = 10**(y[right_edge])
+    
     new_keep = np.arange(left_edge, right_edge + 1)
     
     if len(new_keep) >= 4:
@@ -298,7 +301,7 @@ def barcode_ranks_batched(data_csr, lower=100, exclude_from=50):
     else:
         knee = 10**(y[new_keep[0]])
     
-    return int(knee)
+    return int(knee), int(inflection)
 
 # --- Main Batched EmptyDrops Function ---
 
@@ -424,15 +427,24 @@ def empty_drops(
     results_df['LogProb'] = np.nan
     results_df.loc[original_data.obs_names[test_mask], 'LogProb'] = obs_log_probs
     
+    inflection = None
     if retain is None:
         try:
-            retain = barcode_ranks_batched(data_csr, lower=lower)
+            retain, inflection = barcode_ranks_batched(data_csr, lower=lower)
             print(f"  --> Automatically determined retain threshold: {retain}")
+            print(f"  --> Inflection point: {inflection}")
         except ValueError as e:
             print(f"  --> Knee point detection failed: {e}. Not using retain.")
             retain = np.inf
+            inflection = None
+    else:
+        # If retain is specified, still calculate inflection for plotting
+        try:
+            _, inflection = barcode_ranks_batched(data_csr, lower=lower)
+        except ValueError:
+            inflection = None
     
-    results_df.attrs.update({'retain': retain, 'lower': lower, 'niters': niters})
+    results_df.attrs.update({'retain': retain, 'inflection': inflection, 'lower': lower, 'niters': niters})
     
     # FDR calculation
     pvals_for_fdr = results_df.loc[original_data.obs_names[test_mask], 'PValue'].copy()
@@ -476,6 +488,7 @@ def empty_drops(
             'fdr_0_05': int(fdr_05),
             'limited_count': int(limited_count),
             'calculated_retain': int(retain) if retain is not None else None,
+            'inflection_point': int(inflection) if inflection is not None else None,
             'lower': lower,
             'runtime_seconds': round(total_runtime, 2),
             'total_cells': len(results_df),
