@@ -232,7 +232,8 @@ def run_empty_drops(
     max_batches: int = 100,
     plot: bool = True,
     gex_only: bool = True,
-    output_prefix: Optional[str] = None
+    output_prefix: Optional[str] = None,
+    test_ambient: bool = False
 ):
     """
     Run EmptyDrops analysis on a 10x H5 file.
@@ -286,7 +287,8 @@ def run_empty_drops(
         niters=niters,
         retain=retain,
         max_batches=max_batches,
-        return_metadata=True
+        return_metadata=True,
+        test_ambient=test_ambient
     )
     
     # Save results

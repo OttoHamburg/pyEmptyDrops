@@ -311,12 +311,19 @@ def empty_drops(
     niters: int = 10000,
     retain: Optional[int] = None,
     max_batches: int = 100,
-    return_metadata: bool = False
+    return_metadata: bool = False,
+    test_ambient: bool = False
 ):
     """
     Batched EmptyDrops implementation.
     
     Dramatically reduces multinomial calls by batching similar total counts.
+    
+    Parameters
+    ----------
+    test_ambient : bool, default=False
+        If True, test all barcodes with positive counts (including those <= lower).
+        Low-count barcodes will have PValue but FDR will be NaN for diagnostic purposes.
     """
     start_time = time.time()
     print("--- Starting EmptyDrops (Batched) ---")
@@ -329,7 +336,14 @@ def empty_drops(
     data_csr = data.X.tocsr()
     
     totals = np.asarray(data_csr.sum(axis=1)).flatten()
-    test_mask = totals > lower
+    
+    # Determine which cells to test
+    if test_ambient:
+        # Test all barcodes with positive counts
+        test_mask = totals > 0
+    else:
+        # Only test barcodes above lower threshold
+        test_mask = totals > lower
     
     print(f"  Found {np.sum(test_mask)} cells to test")
     
@@ -448,12 +462,20 @@ def empty_drops(
     
     # FDR calculation
     pvals_for_fdr = results_df.loc[original_data.obs_names[test_mask], 'PValue'].copy()
+    
+    # For test_ambient=True, exclude low-count barcodes from FDR correction
+    if test_ambient:
+        low_count_mask = totals <= lower
+        low_count_indices = original_data.obs_names[low_count_mask]
+        pvals_for_fdr = pvals_for_fdr.drop(low_count_indices, errors='ignore')
+    
     if retain is not None and np.isfinite(retain):
-        pvals_for_fdr[results_df.loc[original_data.obs_names[test_mask], 'Total'] >= retain] = 0
+        pvals_for_fdr[results_df.loc[pvals_for_fdr.index, 'Total'] >= retain] = 0
     
     if len(pvals_for_fdr) > 0:
         _, fdr_values, _, _ = multipletests(pvals_for_fdr.dropna(), method='fdr_bh')
         results_df.loc[pvals_for_fdr.dropna().index, 'FDR'] = fdr_values
+        # Low-count barcodes when test_ambient=True will have NaN FDR
     
     end_time = time.time()
     total_runtime = end_time - start_time
@@ -497,6 +519,7 @@ def empty_drops(
             'version': 'batched',
             'batches_used': len(batched_totals),
             'reduction_factor': round(reduction_factor, 1),
+            'test_ambient': test_ambient,
             **log_prob_stats
         }
         return results_df, metadata
