@@ -1,7 +1,9 @@
 # pyEmptyDrops Documentation
 
 Production-ready command-line tool and Python module for running EmptyDrops analysis on 10x Genomics single-cell RNA sequencing data.
-DOI: 10.5281/zenodo.17593852
+
+[![DOI](https://zenodo.org/badge/1086384858.svg)](https://doi.org/10.5281/zenodo.17593851)
+
 ## Overview
 
 `run_empty_drops.py` provides a streamlined interface to the EmptyDrops algorithm, which identifies real cells from ambient RNA in droplet-based single-cell sequencing experiments. The script can be used both as a command-line tool and as an importable Python module.
