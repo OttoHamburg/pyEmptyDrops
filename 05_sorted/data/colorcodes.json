@@ -1,0 +1,102 @@
+{
+  "description": "Color scheme for Bachelor thesis plots - algorithms and marker genes",
+  "version": "1.1",
+  "last_updated": "2025-01-14",
+  
+  "algorithms": {
+    "pyED": {
+      "hex": "#FFCF3E",
+      "rgb": [255, 207, 62],
+      "description": "Python Logo Yellow - pyED (Python EmptyDrops)"
+    },
+    "rED": {
+      "hex": "#1D63B4",
+      "rgb": [29, 99, 180],
+      "description": "R Logo Blue - rED (R EmptyDrops)"
+    },
+    "cellranger": {
+      "hex": "#929a65",
+      "rgb": [146, 154, 101],
+      "description": "CellRanger Green - CR / filtered matrix",
+      "alias": "CR"
+    },
+    "raw_matrix": {
+      "hex": "#6e544e",
+      "rgb": [110, 84, 78],
+      "description": "Darker Brown - raw matrix UMI plots"
+    },
+    "intersection_pyED_CR": {
+      "hex": "#D49C4C",
+      "rgb": [212, 156, 76],
+      "description": "Mix of pyED (#FFCF3E) and CellRanger (#aa6a5a) - intersection/schnittmenge",
+      "calculation": "Average RGB of pyED and CR"
+    },
+    "other": {
+      "hex": "#808080",
+      "rgb": [128, 128, 128],
+      "description": "Random grey - for custom/other algorithms (e.g., self-picked threshold)"
+    }
+  },
+  
+  "marker_genes": {
+    "spermatogonia": {
+      "hex": "#9C27B0",
+      "rgb": [156, 39, 176],
+      "description": "Purple - Spermatogonien (mitotic precursors & SSC)",
+      "genes": ["ID4", "GFRA1", "ZBTB16", "NANOS2", "UTF1", "SALL4", "DMRT1", "SOHLH1", "SOHLH2"]
+    },
+    "spermatocytes": {
+      "hex": "#00897B",
+      "rgb": [0, 137, 123],
+      "description": "Teal - Spermatocytes (meiotic cells) - CHANGED from blue to avoid confusion with rED blue",
+      "genes": ["STRA8", "DMRT6", "SYCP1", "SYCP2", "SYCP3", "HORMAD1", "HORMAD2", "TEX101", "MLH1"],
+      "note": "Changed from blue (#2196F3) to teal to avoid confusion with rED blue (#1D63B4)"
+    },
+    "round_spermatids": {
+      "hex": "#4CAF50",
+      "rgb": [76, 175, 80],
+      "description": "Green - Round spermatids (early post-meiotic)",
+      "genes": ["TNP1", "TNP2", "ACRV1", "CRISP2", "GSTM3", "SPATA16"]
+    },
+    "elongated_spermatids": {
+      "hex": "#FF9800",
+      "rgb": [255, 152, 0],
+      "description": "Orange - Elongated/condensed spermatids",
+      "genes": ["PRM1", "PRM2", "TNP1", "TNP2", "GSTM3", "CRISP2", "OAZ3", "SPATA16"]
+    },
+    "mature_sperm": {
+      "hex": "#F44336",
+      "rgb": [244, 67, 54],
+      "description": "Red - Mature spermatozoa",
+      "genes": ["PRM1", "PRM2", "AKAP4", "SPAG6"]
+    },
+    "leydig_cells": {
+      "hex": "#00BCD4",
+      "rgb": [0, 188, 212],
+      "description": "Cyan - Leydig cells (testosterone-producing)",
+      "genes": ["CYP17A1", "CYP11A1", "HSD3B1", "HSD17B3", "STAR", "INSL3", "NR5A1", "PDGFRA", "NR2F2"]
+    },
+    "sertoli_cells": {
+      "hex": "#E91E63",
+      "rgb": [233, 30, 99],
+      "description": "Pink - Sertoli cells (support cells)",
+      "genes": ["SOX9", "AMH", "GATA4", "WT1", "INHA", "CLDN11", "VIM", "TF", "RBP1", "FSHR"]
+    },
+    "peritubular_cells": {
+      "hex": "#546E7A",
+      "rgb": [84, 110, 122],
+      "description": "Blue-grey/Slate - Peritubular cells (smooth muscle-like) - CHANGED from brown to avoid confusion with CellRanger brown",
+      "genes": ["ACTA2", "MYH11", "CNN1", "TAGLN", "PDGFRB", "DES", "CSPG4"],
+      "note": "Changed from brown (#795548) to blue-grey to avoid confusion with CellRanger brown (#aa6a5a)"
+    }
+  },
+  
+  "usage_notes": {
+    "algorithms": "Use these colors whenever a specific algorithm or data type appears in plots/figures. These colors are EXCLUSIVE and must not be confused with marker gene colors.",
+    "marker_genes": "Use these colors when visualizing expression or highlighting specific marker genes for cell populations. These colors are distinct from algorithm colors to avoid confusion.",
+    "color_exclusivity": "Algorithm colors (especially rED blue #1D63B4 and CellRanger brown #aa6a5a) are EXCLUSIVE and must be immediately recognizable. Marker gene colors have been chosen to avoid similar hues.",
+    "colorblind_friendly": "All marker gene colors are chosen to be distinguishable for colorblind viewers where possible",
+    "intersection": "The intersection color (pyED + CR) is calculated as the average RGB of both colors"
+  }
+}
+

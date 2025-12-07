@@ -1,0 +1,38 @@
+{
+  "analysis_date": "2025-06-24T16:03:10.333409",
+  "fdr_threshold": 0.05,
+  "category_counts": {
+    "Called by Neither": 716172,
+    "EmptyDrops Only": 3558,
+    "Called by Both Methods": 2333,
+    "CellRanger Only": 368
+  },
+  "total_genes_analyzed": 7499,
+  "top_genes": [
+    "PRM1",
+    "TNP1",
+    "TNP2",
+    "ODF1",
+    "SMCP",
+    "SYCP3",
+    "ACRV1",
+    "INSL3",
+    "DLG2",
+    "SPAG16",
+    "LRMDA",
+    "LUZP2",
+    "MBNL3",
+    "RBMS3",
+    "FRS2",
+    "EBF1"
+  ],
+  "target_genes_found": [
+    "PRM1",
+    "TNP1",
+    "TNP2",
+    "ODF1",
+    "SMCP",
+    "SYCP3",
+    "ACRV1"
+  ]
+}
